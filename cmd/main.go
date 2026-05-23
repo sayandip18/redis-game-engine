@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/sayandip18/redis-game-engine/internal/client"
+	"github.com/sayandip18/redis-game-engine/internal/player"
 	"github.com/sayandip18/redis-game-engine/internal/session"
 )
 
@@ -77,6 +78,65 @@ func main() {
 				fmt.Printf("DAU %s: %d\n", today, count)
 			default:
 				fmt.Printf("Unknown session subcommand: %s\n", os.Args[2])
+			}
+		case "player":
+			if len(os.Args) < 3 {
+				fmt.Println("Usage: player <create|profile|top10|rank> [args...]")
+				return
+			}
+			switch os.Args[2] {
+			case "create":
+				if len(os.Args) < 5 {
+					fmt.Println("Usage: player create <userID> <username>")
+					return
+				}
+				p, err := player.CreatePlayer(os.Args[3], os.Args[4])
+				if err != nil {
+					log.Fatal(err)
+				}
+				fmt.Printf("userID:   %s\nusername: %s\nMMR:      %d\ncreated:  %s\n",
+					p.UserID, p.Username, p.MMR, p.CreatedAt.Format(time.RFC3339))
+			case "profile":
+				if len(os.Args) < 4 {
+					fmt.Println("Usage: player profile <userID>")
+					return
+				}
+				p, err := player.GetProfile(os.Args[3])
+				if err != nil {
+					log.Fatal(err)
+				}
+				fmt.Printf("userID:   %s\nusername: %s\nMMR:      %d\ncreated:  %s\n",
+					p.UserID, p.Username, p.MMR, p.CreatedAt.Format(time.RFC3339))
+				if len(p.Stats) > 0 {
+					fmt.Println("stats:")
+					for k, v := range p.Stats {
+						fmt.Printf("  %s: %d\n", k, v)
+					}
+				}
+			case "top10":
+				entries, err := player.GetGlobalTop(10)
+				if err != nil {
+					log.Fatal(err)
+				}
+				for _, e := range entries {
+					fmt.Printf("#%-3d %-20s %d\n", e.Rank, e.PlayerID, e.MMR)
+				}
+			case "rank":
+				if len(os.Args) < 4 {
+					fmt.Println("Usage: player rank <userID>")
+					return
+				}
+				rank, err := player.GetRank(os.Args[3])
+				if err != nil {
+					log.Fatal(err)
+				}
+				p, err := player.GetProfile(os.Args[3])
+				if err != nil {
+					log.Fatal(err)
+				}
+				fmt.Printf("rank: #%d  MMR: %d\n", rank, p.MMR)
+			default:
+				fmt.Printf("Unknown player subcommand: %s\n", os.Args[2])
 			}
 		default:
 			fmt.Printf("Unknown command: %s\n", os.Args[1])
